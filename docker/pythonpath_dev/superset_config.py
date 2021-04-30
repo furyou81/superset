@@ -25,7 +25,7 @@ import logging
 import os
 
 from cachelib.file import FileSystemCache
-
+from celery.schedules import crontab
 logger = logging.getLogger()
 
 
@@ -67,6 +67,7 @@ REDIS_RESULTS_DB = get_env_variable("REDIS_CELERY_DB", 1)
 
 RESULTS_BACKEND = FileSystemCache("/app/superset_home/sqllab")
 
+FEATURE_FLAGS = {"ALERT_REPORTS": True}
 
 class CeleryConfig(object):
     BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}"
@@ -74,10 +75,33 @@ class CeleryConfig(object):
     CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_RESULTS_DB}"
     CELERY_ANNOTATIONS = {"tasks.add": {"rate_limit": "10/s"}}
     CELERY_TASK_PROTOCOL = 1
+    CELERYBEAT_SCHEDULE = {
+        "reports.scheduler": {
+            "task": "reports.scheduler",
+            "schedule": crontab(minute="*", hour="*"),
+        },
+        "reports.prune_log": {
+            "task": "reports.prune_log",
+            "schedule": crontab(minute=10, hour=0),
+        },
+    }
 
 
 CELERY_CONFIG = CeleryConfig
 SQLLAB_CTAS_NO_LIMIT = True
+
+SMTP_HOST = "email-smtp.eu-west-1.amazonaws.com"
+SMTP_STARTTLS = True
+SMTP_SSL = False
+SMTP_USER = "xxx"
+SMTP_PORT = 587
+SMTP_PASSWORD = "xxx"
+SMTP_MAIL_FROM = "xxx@hotmail.fr"
+
+# This is for internal use, you can keep http
+WEBDRIVER_BASEURL = "http://superset:8088/"
+# The base URL for the email report hyperlinks.
+WEBDRIVER_BASEURL_USER_FRIENDLY = WEBDRIVER_BASEURL
 
 #
 # Optionally import superset_config_docker.py (which will have been included on
